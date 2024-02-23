@@ -1,0 +1,135 @@
+[tool.poetry]
+name = "qm-octave"
+version = "2.1.0"
+description = "SDK to control an Octave with QUA"
+readme="README.md"
+authors = [
+    "QM <info@quantum-machines.co>"
+]
+packages = [
+    { include = "octave_sdk" }
+]
+include = [
+    "CHANGELOG.md",
+    "LICENSE",
+    "octave_sdk/grpc/quantummachines/octave/api/v1/*.py",
+    "octave_sdk/grpc/quantummachines/octave/api/*.py",
+    "octave_sdk/grpc/quantummachines/octave/*.py",
+    "octave_sdk/grpc/quantummachines/*.py",
+    "octave_sdk/grpc/*.py",
+]
+exclude = [
+    "octave_sdk/tests/*"
+]
+
+[tool.poetry.dependencies]
+python = ">=3.7, <3.12"
+betterproto = [
+    {version = "2.0.0b5", python = ">=3.7,<3.11"},
+    {version = "2.0.0b6", python = "~=3.11"}
+]
+grpcio = "^1.59.2"
+protobuf = [
+    {version = "^3.17.3", python = ">=3.7,<3.11"},
+    {version = "^4.24", python = ">=3.11"}
+]
+grpclib = { version = "^0.4.3rc3", python = "^3.10", allow-prereleases = true}
+
+[tool.poetry.dev-dependencies]
+protobuf = [
+    {version = "3.17.3", python = ">=3.7,<3.11"},
+    {version = "^4.24", python = ">=3.11"}
+]
+betterproto = [
+    {version = "2.0.0b5", python = ">=3.7,<3.11", extras = ["compiler"]},
+    {version = "2.0.0b6", python = "~=3.11", extras = ["compiler"]}
+]
+grpcio-tools = [
+    {version = "1.39.0", python = ">=3.7,<3.11"},
+    {version = "^1.57", python = ">=3.11"}
+]
+
+# Jinja2 and isort was added for being able to create a version
+Jinja2 = "^3.1.2"
+isort = "5.11.5"
+black = "^22.3.0"
+flake8 = "^4.0.1"
+pytest = "^7.1.2"
+pytest-mock = "*"
+flake8-bugbear = "^22.4.25"
+poethepoet = "0.10.0"
+pytest-cov = "^3.0.0"
+pytest-asyncio = "^0.18.3"
+pytest-deprecate = "1.0.2"
+[tool.black]
+target-version = ["py37"]
+exclude = "grpc/.*"
+line-length = 120
+
+[tool.poe.tasks]
+
+[tool.poe.tasks.clean-grpc]
+sequence = [
+    { "script" = "shutil:rmtree('octave_sdk/grpc', ignore_errors=True)" },
+    { "script" = "shutil:rmtree('ignore/proto', ignore_errors=True)" },
+    { "script" = "pathlib:Path('octave_sdk/grpc').mkdir(parents=False, exist_ok=True)" },
+]
+help = "Deletes gRPC generated files"
+
+[tool.poe.tasks.copy-grpc-api]
+script = "shutil:copytree('../proto', 'ignore/proto/octave_sdk/grpc')"
+
+[tool.poe.tasks.generate-grpc-api]
+ cmd = '''
+poetry run python -m grpc_tools.protoc --proto_path=./ignore/proto --python_out=. --grpc_python_out=.
+ignore/proto/octave_sdk/grpc/quantummachines/octave/api/v1/api.proto
+'''
+
+[tool.poe.tasks.generate-grpc-api-better]
+cmd = '''
+poetry run python -m grpc_tools.protoc --proto_path=./ignore/proto --python_betterproto_out=octave_sdk/grpc
+ignore/proto/octave_sdk/grpc/quantummachines/octave/api/v1/api.proto
+'''
+help = "Generate gRPC python files for describing a OctaveClient API"
+
+[tool.poe.tasks.generate-grpc-api-better-clean]
+sequence = [
+    { "script" = "shutil:rmtree('quantummachines', ignore_errors=True)" }
+]
+help = "Deletes gRPC generated files"
+
+[tool.poe.tasks.generate-grpc]
+sequence = ["clean-grpc", "copy-grpc-api", "generate-grpc-api-better", "generate-grpc-api-better-clean"]
+help = "Generate gRPC python files"
+
+[tool.poe.tasks.format]
+cmd = "black octave_sdk"
+help = "Format source files according to the style rules"
+
+[tool.poe.tasks.check-format-black]
+cmd = "black octave_sdk --check"
+help = "Check that all files are formatted according to the style rules"
+
+[tool.poe.tasks.lint]
+cmd = "flake8 octave_sdk"
+help = "Check for lint errors"
+
+[tool.poe.tasks.check-format]
+sequence = ["check-format-black", "lint"]
+help = "Perform all format checks possible on the code"
+
+[tool.poe.tasks.test]
+cmd = "pytest"
+help = "Run all unit tests"
+
+[tool.poe.tasks.check]
+sequence = ["check-format", "test"]
+help = "Perform all check possible on the code"
+
+[tool.poe.tasks.check-grpc-breaking-changes]
+cmd = "buf breaking --against '.git#branch=main'"
+help = "Check if the API broke against the main branch"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
