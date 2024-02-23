@@ -1,10 +1,10 @@
 Metadata-Version: 2.1
 Name: qm-octave
-Version: 2.1.0
+Version: 2.1.0+equal1
 Summary: SDK to control an Octave with QUA
 Author: QM
 Author-email: info@quantum-machines.co
-Requires-Python: >=3.7,<3.12
+Requires-Python: >=3.7,<3.13
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.7
 Classifier: Programming Language :: Python :: 3.8
